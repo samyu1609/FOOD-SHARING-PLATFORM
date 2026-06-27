@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { exec } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
@@ -33,6 +32,9 @@ export const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
+app.get("/", (req, res) => {
+  res.send("HungerBridge Backend is Running Successfully 🚀");
+});
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
@@ -123,7 +125,7 @@ const checkExpiredRequestsAndExpiry = async () => {
     }
 
     if (reassignedCount > 0 || expiringFood.length > 0 || expiredFood.length > 0) {
-       io.emit('dashboardUpdated'); // Emit for general dashboard refresh
+      io.emit('dashboardUpdated'); // Emit for general dashboard refresh
     }
 
     console.log(`Auto-check completed: ${reassignedCount} reassigned, ${expiringFood.length} urgent, ${expiredFood.length} expired`);
@@ -137,27 +139,19 @@ setInterval(checkExpiredRequestsAndExpiry, 2 * 60 * 1000);
 
 const PORT = process.env.PORT || 5001;
 
-httpServer.on('error', (e) => {
-  if (e.code === 'EADDRINUSE') {
-    console.log(`Port ${PORT} is in use. Attempting to kill the old process...`);
-    // Windows specific command to kill the port
-    const cmd = `FOR /F "tokens=5" %T IN ('netstat -a -n -o ^| findstr :${PORT}') DO taskkill /PID %T /F`;
-    exec(cmd, (err, stdout, stderr) => {
-      // Ignore errors (e.g. if taskkill fails because process is already dead)
-      console.log('Attempted to kill old process. Restarting server...');
-      setTimeout(() => {
-        httpServer.listen(PORT, () => {
-          console.log(`Server running on port ${PORT}`);
-          console.log('Automated cron jobs started (2-minute interval)');
-        });
-      }, 1000);
-    });
-  } else {
-    console.error('Server error:', e);
-  }
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "HungerBridge Backend is Running",
+    timestamp: new Date().toISOString()
+  });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('Automated cron jobs started (2-minute interval)');
+// Start Server
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log("====================================");
+  console.log(`🚀 Server running on Port ${PORT}`);
+  console.log("✅ HungerBridge Backend Started");
+  console.log("====================================");
+  console.log("⏰ Automated cron jobs started (2-minute interval)");
 });
